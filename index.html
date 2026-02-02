@@ -28,6 +28,7 @@
             border-radius: 16px;
             border: 1px solid rgba(255,255,255,0.1);
             box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            transition: 0.3s;
         }
 
         /* COMMON UI */
@@ -79,11 +80,14 @@
     <div id="v-auth" class="view active">
         <h1 style="color:gold; font-size: 60px; text-shadow: 0 0 20px rgba(255,215,0,0.5); margin-bottom: 20px;">GRAND CASINO</h1>
         <div class="glass-panel">
-            <h3 style="margin-top:0; color:#ccc;">MEMBER ACCESS</h3>
+            <h3 id="auth-title" style="margin-top:0; color:#ccc;">MEMBER LOGIN</h3>
+            
             <input id="u-in" placeholder="Username"><br>
             <input id="p-in" type="password" placeholder="Password"><br><br>
-            <button class="btn-main" onclick="auth('login')">ENTER CASINO</button><br>
-            <button style="background:transparent; color:#bbb; margin-top:15px; text-decoration: underline; font-size: 14px;" onclick="auth('register')">Register New Account</button>
+            
+            <button id="btn-auth-action" class="btn-main" onclick="submitAuth()">ENTER CASINO</button><br>
+            
+            <button id="btn-auth-toggle" style="background:transparent; color:#bbb; margin-top:15px; text-decoration: underline; font-size: 14px;" onclick="toggleAuthMode()">Register New Account</button>
         </div>
     </div>
 
@@ -209,6 +213,7 @@
         const s = io();
         let curChip = 50;
         let bjState = null;
+        let isRegisterMode = false;
 
         // --- NAVIGATION ---
         function nav(id) {
@@ -216,12 +221,38 @@
             document.getElementById(id).classList.add('active');
         }
 
-        // --- AUTH ---
-        function auth(type) {
+        // --- AUTH LOGIC (FIXED) ---
+        function toggleAuthMode() {
+            isRegisterMode = !isRegisterMode;
+            const title = document.getElementById('auth-title');
+            const btnAction = document.getElementById('btn-auth-action');
+            const btnToggle = document.getElementById('btn-auth-toggle');
+
+            if(isRegisterMode) {
+                title.innerText = "CREATE ACCOUNT";
+                btnAction.innerText = "REGISTER";
+                btnAction.style.background = "#00E5FF";
+                btnToggle.innerText = "Back to Login";
+            } else {
+                title.innerText = "MEMBER LOGIN";
+                btnAction.innerText = "ENTER CASINO";
+                btnAction.style.background = "gold";
+                btnToggle.innerText = "Register New Account";
+            }
+        }
+
+        function submitAuth() {
             const u = document.getElementById('u-in').value;
             const p = document.getElementById('p-in').value;
-            if(u && p) s.emit(type, {u, p});
+            if(!u || !p) { alert("Please fill in both fields"); return; }
+            
+            if(isRegisterMode) {
+                s.emit('register', {u, p});
+            } else {
+                s.emit('login', {u, p});
+            }
         }
+
         s.on('login_ok', d => {
             nav('v-home');
             updateBal(d.b);
