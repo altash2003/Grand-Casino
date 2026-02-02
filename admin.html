@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ADMIN</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        body { background: #111; color: white; font-family: 'Rajdhani', sans-serif; padding: 20px; text-align: center; }
+        .panel { background: #222; padding: 20px; border: 1px solid #444; border-radius: 8px; max-width: 800px; margin: 0 auto; }
+        .row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 10px; padding: 10px; border-bottom: 1px solid #333; align-items: center; }
+        button { background: #444; color: white; border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #666; }
+        input { background: #333; border: 1px solid #555; color: white; padding: 5px; width: 60px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="panel">
+        <h1 style="color:gold">ADMIN PANEL</h1>
+        <button onclick="s.emit('admin_req_data')" style="margin-bottom:20px; padding:10px 20px; background:gold; color:black; font-weight:bold;">REFRESH DATA</button>
+        
+        <div class="row" style="font-weight:bold; color:cyan;">
+            <div>USER</div><div>PASS</div><div>BAL</div><div>ADD CREDITS</div>
+        </div>
+        <div id="list"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const s = io();
+        const PASS = "Kenm4"; // Simple Pass
+
+        let p = prompt("Admin Password:");
+        if(p !== PASS) document.body.innerHTML = "<h1>ACCESS DENIED</h1>";
+        else {
+            s.emit('admin_req_data');
+            setInterval(() => s.emit('admin_req_data'), 5000);
+        }
+
+        s.on('admin_data_resp', d => {
+            const l = document.getElementById('list'); l.innerHTML = '';
+            Object.entries(d.users).forEach(([u, data]) => {
+                let online = Object.values(d.active).includes(u) ? '🟢' : '🔴';
+                l.innerHTML += `
+                    <div class="row">
+                        <div style="text-align:left">${online} ${u}</div>
+                        <div>${data.password}</div>
+                        <div style="color:gold">${data.balance}</div>
+                        <div>
+                            <input id="amt-${u}" type="number" placeholder="0">
+                            <button onclick="add('${u}')">+</button>
+                        </div>
+                    </div>`;
+            });
+        });
+
+        function add(u) {
+            let a = document.getElementById(`amt-${u}`).value;
+            if(a) s.emit('admin_add_credits', {u:u, amt:a});
+        }
+    </script>
+</body>
+</html>

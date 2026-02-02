@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Grand Casino</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        /* GLOBAL BACKGROUND SETUP */
+        body { 
+            background: url('background.jpg') no-repeat center center fixed; 
+            background-size: cover; 
+            color: white; 
+            font-family: 'Rajdhani', sans-serif; 
+            margin: 0; 
+            text-align: center; 
+            overflow: hidden; 
+        }
+        
+        /* VIEWS */
+        .view { display: none; height: 100vh; flex-direction: column; align-items: center; justify-content: center; width: 100%; }
+        .view.active { display: flex; }
+
+        /* GLASS PANEL (For Home/Auth) */
+        .glass-panel {
+            background: rgba(0, 0, 0, 0.75); /* Dark see-through overlay */
+            backdrop-filter: blur(10px);      /* Blurs the background image */
+            padding: 40px;
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 0 50px rgba(0,0,0,0.5);
+        }
+
+        /* COMMON UI */
+        button { cursor: pointer; border: none; font-family: 'Rajdhani'; font-weight: bold; }
+        .btn-main { padding: 15px 30px; font-size: 20px; border-radius: 8px; background: gold; color: black; margin: 10px; width: 220px; transition: 0.2s; border: 2px solid #b8860b; }
+        .btn-main:hover { transform: scale(1.05); filter: brightness(1.2); }
+        .btn-back { position: absolute; top: 10px; left: 10px; padding: 8px 20px; background: rgba(0,0,0,0.8); color: white; border-radius: 4px; z-index: 10; border: 1px solid #444; }
+        input { padding: 12px; border-radius: 4px; border: 1px solid #555; background: rgba(0,0,0,0.5); color: white; text-align: center; margin: 5px; font-size: 16px; width: 200px; }
+        input:focus { border-color: gold; outline: none; }
+
+        /* HUD */
+        .hud { position: absolute; top: 10px; right: 10px; text-align: right; z-index: 9; background: rgba(0,0,0,0.6); padding: 5px 15px; border-radius: 8px; border: 1px solid #333; }
+        .hud div { font-size: 12px; color: #aaa; letter-spacing: 1px; }
+        .hud span { font-size: 24px; color: gold; font-weight: 800; }
+        .timer-display { position: absolute; top: 10px; width: 100%; text-align: center; font-size: 30px; color: cyan; z-index: 8; pointer-events: none; text-shadow: 0 0 10px cyan; }
+
+        /* GAME SPECIFIC */
+        .die { width: 70px; height: 70px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; margin: 5px; font-size: 24px; border: 2px solid rgba(255,255,255,0.2); box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+        .RED { background: linear-gradient(135deg, #d32f2f, #b71c1c); } .GREEN { background: linear-gradient(135deg, #388e3c, #1b5e20); } .BLUE { background: linear-gradient(135deg, #1976d2, #0d47a1); }
+        .YELLOW { background: linear-gradient(135deg, #fbc02d, #f57f17); color: black; } .PINK { background: linear-gradient(135deg, #f06292, #c2185b); } .WHITE { background: linear-gradient(135deg, #f5f5f5, #bdbdbd); color: black; }
+
+        .chip-rack { margin-top: 20px; display: flex; gap: 15px; justify-content: center; background: rgba(0,0,0,0.4); padding: 10px; border-radius: 50px; display: inline-flex; }
+        .chip { width: 50px; height: 50px; border-radius: 50%; background: #222; border: 3px dashed #666; display: flex; align-items: center; justify-content: center; color: #aaa; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .chip.active { border-color: gold; color: gold; background: rgba(255, 215, 0, 0.1); transform: scale(1.1); box-shadow: 0 0 15px gold; border-style: solid; }
+
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; max-width: 600px; margin: 10px auto; }
+        .btn-bet { height: 80px; border-radius: 8px; font-size: 18px; color: white; position: relative; border: 2px solid rgba(255,255,255,0.1); cursor: pointer; transition: 0.1s; font-weight: 800; text-shadow: 0 2px 2px rgba(0,0,0,0.5); }
+        .btn-bet:hover { filter: brightness(1.1); transform: translateY(-2px); }
+        .btn-bet:active { transform: scale(0.98); }
+        .btn-bet span { position: absolute; bottom: 5px; right: 5px; font-size: 12px; background: rgba(0,0,0,0.7); padding: 2px 6px; border-radius: 4px; color: gold; }
+
+        /* ROULETTE BOARD */
+        .r-board { display: grid; grid-template-columns: 50px repeat(3, 1fr); gap: 3px; max-width: 500px; margin: 20px auto; }
+        .r-cell { height: 45px; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; cursor: pointer; border: 1px solid #444; font-weight: bold; }
+        .r-cell:hover { background: #555; border-color: white; }
+        .r-red { background: rgba(183, 28, 28, 0.8); } .r-black { background: rgba(20, 20, 20, 0.9); } .r-green { background: rgba(27, 94, 32, 0.8); }
+
+        /* CARDS */
+        .card { width: 70px; height: 100px; background: white; color: black; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; margin: 4px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.5); }
+        
+        /* ADMIN */
+        .admin-row { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 5px; border-bottom: 1px solid #333; padding: 8px; font-size: 14px; background: rgba(0,0,0,0.5); }
+    </style>
+</head>
+<body>
+
+    <div id="toast" style="position:fixed; top:50px; left:50%; transform:translate(-50%); background:rgba(0,0,0,0.9); padding:15px 30px; border:2px solid gold; border-radius:30px; display:none; z-index:100; color:gold; font-size: 20px; font-weight: bold; box-shadow: 0 10px 40px black;"></div>
+
+    <div id="v-auth" class="view active">
+        <h1 style="color:gold; font-size: 60px; text-shadow: 0 0 20px rgba(255,215,0,0.5); margin-bottom: 20px;">GRAND CASINO</h1>
+        <div class="glass-panel">
+            <h3 style="margin-top:0; color:#ccc;">MEMBER ACCESS</h3>
+            <input id="u-in" placeholder="Username"><br>
+            <input id="p-in" type="password" placeholder="Password"><br><br>
+            <button class="btn-main" onclick="auth('login')">ENTER CASINO</button><br>
+            <button style="background:transparent; color:#bbb; margin-top:15px; text-decoration: underline; font-size: 14px;" onclick="auth('register')">Register New Account</button>
+        </div>
+    </div>
+
+    <div id="v-home" class="view">
+        <div class="hud"><div>BALANCE</div><span id="bal-home">0</span></div>
+        
+        <div class="glass-panel" style="width: 80%; max-width: 800px;">
+            <h2 style="color:white; margin-bottom: 30px; font-size: 30px;">SELECT GAME</h2>
+            <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
+                <button class="btn-main" onclick="nav('v-color')" style="background: linear-gradient(45deg, #FFD700, #FFA000);">COLOR GAME</button>
+                <button class="btn-main" onclick="nav('v-roulette')" style="background: linear-gradient(45deg, #00E5FF, #0097A7); color:white; text-shadow:0 1px 2px black;">ROULETTE</button>
+                <button class="btn-main" onclick="nav('v-blackjack')" style="background: linear-gradient(45deg, #00C853, #007E33); color:white; text-shadow:0 1px 2px black;">BLACKJACK</button>
+                <button class="btn-main" onclick="nav('v-baccarat')" style="background: linear-gradient(45deg, #FF4444, #CC0000); color:white; text-shadow:0 1px 2px black;">BACCARAT</button>
+            </div>
+        </div>
+        
+        <button onclick="openAdmin()" style="position:fixed; bottom: 10px; right: 10px; background:rgba(0,0,0,0.5); color:#666; padding:5px 10px; border-radius:4px; font-size: 10px;">ADMIN</button>
+    </div>
+
+    <div id="v-color" class="view" style="background: rgba(0,0,0,0.6);">
+        <button class="btn-back" onclick="nav('v-home')">LOBBY</button>
+        <div class="timer-display" id="t-color">0</div>
+        <div class="hud"><div>BALANCE</div><span id="bal-color">0</span></div>
+        
+        <div style="margin-bottom:30px;">
+            <div id="d1" class="die">?</div><div id="d2" class="die">?</div><div id="d3" class="die">?</div>
+            <div id="stat-color" style="font-size: 24px; color:#fff; margin-top:10px; font-weight: bold; text-shadow: 0 2px 4px black;">WAITING</div>
+        </div>
+
+        <div class="grid">
+            <button class="btn-bet RED" onclick="betC('RED')">RED <span id="bRED">0</span></button>
+            <button class="btn-bet GREEN" onclick="betC('GREEN')">GREEN <span id="bGREEN">0</span></button>
+            <button class="btn-bet BLUE" onclick="betC('BLUE')">BLUE <span id="bBLUE">0</span></button>
+            <button class="btn-bet YELLOW" onclick="betC('YELLOW')">YEL <span id="bYELLOW">0</span></button>
+            <button class="btn-bet PINK" onclick="betC('PINK')">PINK <span id="bPINK">0</span></button>
+            <button class="btn-bet WHITE" onclick="betC('WHITE')">WHT <span id="bWHITE">0</span></button>
+        </div>
+        <div class="chip-rack" id="cr-color"></div>
+    </div>
+
+    <div id="v-roulette" class="view" style="background: rgba(0,0,0,0.6);">
+        <button class="btn-back" onclick="nav('v-home')">LOBBY</button>
+        <div class="timer-display" id="t-roul">0</div>
+        <div class="hud"><div>BALANCE</div><span id="bal-roul">0</span></div>
+
+        <div class="glass-panel" style="padding: 20px; margin-bottom: 10px;">
+            <h1 id="res-roul" style="margin:0; font-size: 60px; color: gold;">--</h1>
+            <div id="stat-roul" style="color:#aaa; font-size:14px;">RESULT</div>
+        </div>
+
+        <div class="r-board" id="r-grid">
+            <div class="r-cell r-green" style="grid-row:span 2; border-radius: 4px 0 0 4px;" onclick="betR('0')">0</div>
+            <div style="display:contents" id="r-nums"></div>
+            <div class="r-cell r-green" style="grid-column:1; border-radius: 4px 0 0 4px;" onclick="betR('00')">00</div>
+            
+            <div style="grid-column:2/span 4; display:flex; gap:3px; margin-top:3px;">
+                <div class="r-cell" style="flex:1" onclick="betR('RED')">RED</div>
+                <div class="r-cell" style="flex:1" onclick="betR('BLACK')">BLK</div>
+                <div class="r-cell" style="flex:1" onclick="betR('EVEN')">EVEN</div>
+                <div class="r-cell" style="flex:1" onclick="betR('ODD')">ODD</div>
+            </div>
+        </div>
+        <div class="chip-rack" id="cr-roul"></div>
+    </div>
+
+    <div id="v-blackjack" class="view" style="background: radial-gradient(circle, #1a4d2e 0%, #0d2616 100%);">
+        <button class="btn-back" onclick="nav('v-home')">LOBBY</button>
+        <div class="hud"><div>BALANCE</div><span id="bal-bj">0</span></div>
+
+        <div style="margin-bottom: 10px; color: #88cfa3; font-size: 14px;">DEALER HAND</div>
+        <div id="dh" style="min-height:110px; margin-bottom:10px;"></div>
+        
+        <div id="bj-stat" style="color:gold; font-size:30px; height:40px; text-shadow: 0 2px 4px black;">PLACE BET</div>
+
+        <div id="ph" style="min-height:110px;"></div>
+        <div style="margin-top: 10px; color: #88cfa3; font-size: 14px;">YOUR HAND</div>
+
+        <div id="bj-controls" style="margin-top:20px;">
+            <div id="bj-bet-ui">
+                <button class="btn-main" onclick="bjDeal(50)" style="width:120px; font-size:16px;">DEAL 50</button>
+                <button class="btn-main" onclick="bjDeal(100)" style="width:120px; font-size:16px;">DEAL 100</button>
+            </div>
+            <div id="bj-play-ui" style="display:none;">
+                <button class="btn-main" onclick="s.emit('bj_hit', bjState)" style="background:#00E5FF; border-color: #00B8D4;">HIT</button>
+                <button class="btn-main" onclick="s.emit('bj_stand', bjState)" style="background:#ff4444; border-color: #CC0000; color: white;">STAND</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="v-baccarat" class="view" style="background: radial-gradient(circle, #5a0000 0%, #2a0000 100%);">
+        <button class="btn-back" onclick="nav('v-home')">LOBBY</button>
+        <div class="timer-display" id="t-bacc">0</div>
+        <div class="hud"><div>BALANCE</div><span id="bal-bacc">0</span></div>
+
+        <div id="bacc-res" style="font-size:40px; margin-bottom:30px; min-height:50px; font-weight: bold; text-shadow: 0 2px 5px black;">--</div>
+
+        <div style="display:flex; gap:20px; align-items: center;">
+            <div onclick="betB('PLAYER')" style="border:3px solid #00E5FF; background:rgba(0,0,0,0.3); padding:20px; width:100px; cursor:pointer; border-radius: 12px; transition: 0.2s;">
+                <h2 style="color:#00E5FF; margin:0;">PLAYER</h2>
+                <div style="color:#aaa;">1:1</div>
+            </div>
+            <div onclick="betB('TIE')" style="border:3px solid #00C853; background:rgba(0,0,0,0.3); padding:15px; width:80px; cursor:pointer; border-radius: 12px; transition: 0.2s;">
+                <h3 style="color:#00C853; margin:0;">TIE</h3>
+                <div style="color:#aaa;">8:1</div>
+            </div>
+            <div onclick="betB('BANKER')" style="border:3px solid #ff4444; background:rgba(0,0,0,0.3); padding:20px; width:100px; cursor:pointer; border-radius: 12px; transition: 0.2s;">
+                <h2 style="color:#ff4444; margin:0;">BANKER</h2>
+                <div style="color:#aaa;">0.95:1</div>
+            </div>
+        </div>
+        <div class="chip-rack" id="cr-bacc"></div>
+    </div>
+
+    <div id="v-admin" class="view" style="background:rgba(0,0,0,0.95);">
+        <button class="btn-back" onclick="nav('v-home')">EXIT</button>
+        <h2 style="color:gold">ADMIN PANEL</h2>
+        <button onclick="s.emit('admin_req')" style="padding:10px 20px; background:#333; color:white; border-radius:4px;">REFRESH DATA</button>
+        <div id="ad-list" style="margin-top:20px; width:90%; max-width:600px; border:1px solid #333;"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const s = io();
+        let curChip = 50;
+        let bjState = null;
+
+        // --- NAVIGATION ---
+        function nav(id) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+        // --- AUTH ---
+        function auth(type) {
+            const u = document.getElementById('u-in').value;
+            const p = document.getElementById('p-in').value;
+            if(u && p) s.emit(type, {u, p});
+        }
+        s.on('login_ok', d => {
+            nav('v-home');
+            updateBal(d.b);
+        });
+        s.on('err', msg => alert(msg));
+        
+        // --- SHARED ---
+        function updateBal(b) {
+            ['home','color','roul','bj','bacc'].forEach(id => {
+                const el = document.getElementById(`bal-${id}`);
+                if(el) el.innerText = b;
+            });
+        }
+        s.on('update_balance', updateBal);
+        
+        function toast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg; t.style.display = 'block';
+            setTimeout(() => t.style.display='none', 3000);
+        }
+        s.on('win', d => toast(`WON ${d.amt} on ${d.game}!`));
+
+        // --- CHIPS ---
+        function genChips(id) {
+            const rack = document.getElementById(id);
+            rack.innerHTML = '';
+            [50,100,500,1000].forEach(val => {
+                rack.innerHTML += `<div class="chip ${val===50?'active':''}" onclick="setChip(${val})">${val}</div>`;
+            });
+        }
+        function setChip(v) { 
+            curChip = v; 
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active'); 
+        }
+        ['cr-color', 'cr-roul', 'cr-bacc'].forEach(id => genChips(id));
+
+        // --- COLOR GAME ---
+        function betC(c) { 
+            s.emit('bet_color', {bet:c, amt:curChip}); 
+            const el = document.getElementById('b'+c);
+            el.innerText = parseInt(el.innerText) + curChip;
+        }
+        s.on('result_color', r => {
+            ['d1','d2','d3'].forEach((id, i) => document.getElementById(id).className = `die ${r[i]}`);
+            document.getElementById('stat-color').innerText = "RESULT";
+        });
+        s.on('reset_game', () => {
+            document.querySelectorAll('.btn-bet span').forEach(sp => sp.innerText = '0');
+            document.getElementById('stat-color').innerText = "WAITING";
+            ['d1','d2','d3'].forEach(id => document.getElementById(id).className = 'die');
+            document.getElementById('res-roul').innerText = "--";
+            document.getElementById('bacc-res').innerText = "--";
+        });
+        s.on('timer_update', t => {
+            ['t-color','t-roul','t-bacc'].forEach(id => document.getElementById(id).innerText = t);
+        });
+
+        // --- ROULETTE ---
+        const R_REDS=[1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+        const rg = document.getElementById('r-nums');
+        for(let i=0; i<12; i++) {
+            rg.innerHTML += `<div style="display:none"></div>`;
+            for(let j=1; j<=3; j++) {
+                let n = i*3+j;
+                let c = R_REDS.includes(n)?'r-red':'r-black';
+                rg.innerHTML += `<div class="r-cell ${c}" onclick="betR('${n}')">${n}</div>`;
+            }
+        }
+        function betR(spot) { s.emit('bet_roulette', {bet:spot, amt:curChip}); toast(`Bet ${spot}`); }
+        s.on('result_roulette', r => document.getElementById('res-roul').innerText = `${r.n} ${r.c}`);
+
+        // --- BACCARAT ---
+        function betB(type) { s.emit('bet_baccarat', {bet:type, amt:curChip}); toast(`Bet ${type}`); }
+        s.on('result_baccarat', r => {
+            const el = document.getElementById('bacc-res');
+            el.innerText = `P:${r.pScore} - B:${r.bScore} | ${r.winner}`;
+            el.style.color = r.winner==='PLAYER'?'#00E5FF':(r.winner==='BANKER'?'#ff4444':'#00C853');
+        });
+
+        // --- BLACKJACK ---
+        function bjDeal(amt) { s.emit('bj_deal', amt); }
+        s.on('bj_state', st => {
+            bjState = st;
+            document.getElementById('bj-bet-ui').style.display='none';
+            document.getElementById('bj-play-ui').style.display='block';
+            document.getElementById('bj-stat').innerText = "YOUR TURN";
+            renderCards(st.pHand, 'ph');
+            renderCards([st.dUp, {s:'',v:'?'}], 'dh');
+        });
+        s.on('bj_update', d => { bjState.pHand = d.pHand; renderCards(d.pHand, 'ph'); });
+        s.on('bj_bust', () => { document.getElementById('bj-stat').innerText = "BUST!"; bjEnd(); });
+        s.on('bj_end', d => {
+            renderCards(d.dHand, 'dh');
+            document.getElementById('bj-stat').innerText = `${d.result} ${d.win>0?'+'+d.win:''}`;
+            bjEnd();
+        });
+        function bjEnd() {
+            document.getElementById('bj-play-ui').style.display='none';
+            setTimeout(() => {
+                document.getElementById('bj-bet-ui').style.display='block';
+                document.getElementById('bj-stat').innerText = "PLACE BET";
+                document.getElementById('ph').innerHTML='';
+                document.getElementById('dh').innerHTML='';
+            }, 3000);
+        }
+        function renderCards(cards, id) {
+            const el = document.getElementById(id); el.innerHTML='';
+            cards.forEach(c => {
+                let col = (c.s==='H'||c.s==='D')?'red':'black';
+                let suit = {'H':'♥','D':'♦','S':'♠','C':'♣'}[c.s]||'';
+                el.innerHTML += `<div class="card" style="color:${col}">${c.v}${suit}</div>`;
+            });
+        }
+
+        // --- ADMIN ---
+        function openAdmin() {
+            let p = prompt("Password:");
+            if(p==="Kenm4") { nav('v-admin'); s.emit('admin_req'); }
+        }
+        s.on('admin_resp', d => {
+            const l = document.getElementById('ad-list'); l.innerHTML='';
+            Object.entries(d.users).forEach(([u, dat]) => {
+                let on = Object.values(d.active).includes(u)?'🟢':'🔴';
+                l.innerHTML += `<div class="admin-row">
+                    <div style="text-align:left">${on} ${u}</div>
+                    <div>${dat.password}</div>
+                    <div style="color:gold">${dat.balance}</div>
+                    <div onclick="addCred('${u}')" style="cursor:pointer; background:#444; text-align:center;">+</div>
+                </div>`;
+            });
+        });
+        function addCred(u) {
+            let a = prompt("Amount:");
+            if(a) s.emit('admin_add', {u, amt:a});
+        }
+
+    </script>
+</body>
+</html>

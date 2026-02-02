@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Baccarat</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        body { background: #5a0000; color: white; font-family: 'Rajdhani'; margin: 0; text-align: center; }
+        .nav { background: #222; padding: 10px; display: flex; justify-content: center; gap: 10px; }
+        .nav a { color: #888; text-decoration: none; font-weight: bold; padding: 5px 15px; background: #111; border-radius: 4px; }
+        .nav a.active { background: gold; color: black; }
+        .board { display: flex; justify-content: center; gap: 20px; margin-top: 50px; }
+        .side { width: 150px; padding: 20px; border: 2px solid rgba(255,255,255,0.2); border-radius: 10px; cursor: pointer; transition: 0.2s; }
+        .side:hover { background: rgba(255,255,255,0.1); }
+        .side h1 { margin: 0; font-size: 50px; }
+        .PLAYER { border-color: #00E5FF; color: #00E5FF; }
+        .BANKER { border-color: #ff4444; color: #ff4444; }
+        .TIE { border-color: #00C853; color: #00C853; }
+        .msg { font-size: 30px; margin: 20px; min-height: 40px; }
+    </style>
+</head>
+<body>
+    <div id="auth" style="position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:9; display:flex; justify-content:center; align-items:center; flex-direction:column; gap:10px;">
+        <h1 style="color:gold">LOGIN</h1>
+        <input id="u" placeholder="User"><input id="p" type="password" placeholder="Pass">
+        <button onclick="login()">Enter</button>
+    </div>
+
+    <div class="nav">
+        <a href="/">COLORS</a>
+        <a href="/roulette">ROULETTE</a>
+        <a href="/blackjack">BLACKJACK</a>
+        <a href="/baccarat" class="active">BACCARAT</a>
+    </div>
+
+    <div style="margin-top:20px;">
+        TIMER: <span id="timer" style="font-size:30px">20</span> | BAL: <span id="bal" style="color:gold">0</span>
+    </div>
+
+    <div class="msg" id="status">BETTING OPEN</div>
+
+    <div class="board">
+        <div class="side PLAYER" onclick="bet('PLAYER')"><h3>PLAYER</h3><h1>1:1</h1></div>
+        <div class="side TIE" onclick="bet('TIE')"><h3>TIE</h3><h1>8:1</h1></div>
+        <div class="side BANKER" onclick="bet('BANKER')"><h3>BANKER</h3><h1>0.95:1</h1></div>
+    </div>
+    
+    <div id="resultBox" style="margin-top:30px; font-size:40px; font-weight:bold;"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const s = io();
+        function login(){s.emit('login',{u:document.getElementById('u').value,p:document.getElementById('p').value});}
+        s.on('login_ok',d=>{document.getElementById('auth').style.display='none';document.getElementById('bal').innerText=d.b;});
+        s.on('update_balance',b=>document.getElementById('bal').innerText=b);
+        s.on('timer_update',t=>{document.getElementById('timer').innerText=t; document.getElementById('status').innerText="BETTING";});
+        function bet(type) { s.emit('bet_baccarat', {bet:type, amt:100}); alert("Bet 100 on "+type); }
+        s.on('result_baccarat', r => {
+            document.getElementById('status').innerText = "RESULT";
+            document.getElementById('resultBox').innerText = `P:${r.pScore} vs B:${r.bScore} -> ${r.winner}`;
+            document.getElementById('resultBox').style.color = r.winner==='PLAYER'?'#00E5FF':(r.winner==='BANKER'?'#ff4444':'#00C853');
+        });
+        s.on('reset_game', ()=>document.getElementById('resultBox').innerText='');
+    </script>
+</body>
+</html>
