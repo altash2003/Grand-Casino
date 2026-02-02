@@ -13,57 +13,19 @@ let users = {};
 if (fs.existsSync(DB_FILE)) { 
     try { users = JSON.parse(fs.readFileSync(DB_FILE)); } catch(e) { console.log("DB Reset"); }
 }
-function saveDB() { fs.writeFileSync(DB_FILE, JSON.stringify(users, null, 2)); }
+function saveDatabase() { fs.writeFileSync(DB_FILE, JSON.stringify(users, null, 2)); }
+function logHistory(username, message, balance) {
+    if (!users[username].history) users[username].history = [];
+    users[username].history.unshift(`[${new Date().toLocaleTimeString()}] ${message} | BAL: ${balance}`);
+    if (users[username].history.length > 50) users[username].history.pop();
+}
 
-// --- ROUTING ---
 app.use(express.static(__dirname)); 
 app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
-app.get('/roulette', (req, res) => { res.sendFile(__dirname + '/roulette.html'); });
-app.get('/blackjack', (req, res) => { res.sendFile(__dirname + '/blackjack.html'); });
-app.get('/baccarat', (req, res) => { res.sendFile(__dirname + '/baccarat.html'); });
-app.get('/admin', (req, res) => { res.sendFile(__dirname + '/admin.html'); }); // Added Admin Route
+app.get('/admin', (req, res) => { res.sendFile(__dirname + '/admin.html'); });
 
-// --- SHARED STATE ---
-let timeLeft = 20; 
-let activePlayers = {}; 
-let bets = { color: [], roulette: [], baccarat: [] };
-
-// --- GLOBAL GAME LOOP ---
-setInterval(() => {
-    timeLeft--;
-    if(timeLeft >= 0) io.emit('timer_update', timeLeft);
-
-    if (timeLeft <= 0) {
-        io.emit('status_update', "ROLLING");
-
-        // Generate Results
-        const diceRes = [rColor(), rColor(), rColor()];
-        const roulRes = rRoulette();
-        const baccRes = playBaccaratHand();
-
-        setTimeout(() => {
-            io.emit('result_color', diceRes);
-            processColorWinners(diceRes);
-
-            io.emit('result_roulette', roulRes);
-            processRouletteWinners(roulRes);
-
-            io.emit('result_baccarat', baccRes);
-            processBaccaratWinners(baccRes);
-
-            bets = { color: [], roulette: [], baccarat: [] };
-            
-            setTimeout(() => { 
-                timeLeft = 20; 
-                io.emit('reset_game'); 
-            }, 5000);
-        }, 2000);
-    }
-}, 1000);
-
-// --- HELPERS ---
+// --- GAME STATE ---
 const COLORS = ['RED', 'GREEN', 'BLUE', 'YELLOW', 'PINK', 'WHITE'];
-function rColor() { return COLORS[Math.floor(Math.random()*6)]; }
 const ROULETTE_NUMS = [
     {n:'0',c:'GREEN'},{n:'28',c:'BLACK'},{n:'9',c:'RED'},{n:'26',c:'BLACK'},{n:'30',c:'RED'},{n:'11',c:'BLACK'},
     {n:'7',c:'RED'},{n:'20',c:'BLACK'},{n:'32',c:'RED'},{n:'17',c:'BLACK'},{n:'5',c:'RED'},{n:'22',c:'BLACK'},
@@ -73,7 +35,105 @@ const ROULETTE_NUMS = [
     {n:'21',c:'RED'},{n:'33',c:'BLACK'},{n:'16',c:'RED'},{n:'4',c:'BLACK'},{n:'23',c:'RED'},{n:'35',c:'BLACK'},
     {n:'14',c:'RED'},{n:'2',c:'BLACK'}
 ];
-function rRoulette() { return ROULETTE_NUMS[Math.floor(Math.random()*ROULETTE_NUMS.length)]; }
+
+let timeLeft = 20; 
+let activePlayers = {}; 
+let supportHistory = [];
+let musicState = { playing: false, trackUrl: '', title: 'Waiting...', artist: '', timestamp: 0, lastUpdate: Date.now() };
+
+// Bets Storage
+let bets = { color: [], roulette: [], baccarat: [] };
+
+// --- MAIN LOOP ---
+setInterval(() => {
+    timeLeft--;
+    if(timeLeft >= 0) io.emit('timer_update', timeLeft);
+
+    if (timeLeft <= 0) {
+        io.emit('game_rolling'); // Triggers animations
+
+        // 1. GENERATE RESULTS
+        const diceRes = [COLORS[Math.floor(Math.random()*6)], COLORS[Math.floor(Math.random()*6)], COLORS[Math.floor(Math.random()*6)]];
+        const roulRes = ROULETTE_NUMS[Math.floor(Math.random()*ROULETTE_NUMS.length)];
+        const baccRes = playBaccaratHand();
+
+        // 2. RESOLVE (Delay for suspense)
+        setTimeout(() => {
+            // Color Game
+            io.emit('game_result', diceRes);
+            processColorWinners(diceRes);
+
+            // Roulette
+            io.emit('result_roulette', roulRes);
+            processRouletteWinners(roulRes);
+
+            // Baccarat
+            io.emit('result_baccarat', baccRes);
+            processBaccaratWinners(baccRes);
+
+            // Reset
+            bets = { color: [], roulette: [], baccarat: [] };
+            
+            setTimeout(() => { 
+                timeLeft = 20; 
+                io.emit('game_reset'); 
+            }, 5000);
+        }, 3000);
+    }
+}, 1000);
+
+// --- WIN LOGIC ---
+function processColorWinners(res) {
+    bets.color.forEach(b => {
+        let matches = res.filter(c => c === b.color).length;
+        if(matches > 0) {
+            let win = b.amount * (matches + 1);
+            addWin(b.username, b.socketId, win, "Color Game");
+        }
+    });
+}
+
+function processRouletteWinners(res) {
+    let num = parseInt(res.n);
+    bets.roulette.forEach(b => {
+        let win = 0;
+        let spot = b.bet;
+        if(spot === res.n) win = b.amount * 36; // Exact
+        else if(spot === res.c) win = b.amount * 2; // Color
+        else if(spot === 'EVEN' && num>0 && num%2===0) win = b.amount * 2;
+        else if(spot === 'ODD' && num>0 && num%2!==0) win = b.amount * 2;
+        else if(spot === '1-18' && num>=1 && num<=18) win = b.amount * 2;
+        else if(spot === '19-36' && num>=19 && num<=36) win = b.amount * 2;
+        else if(spot === '1ST12' && num>=1 && num<=12) win = b.amount * 3;
+        else if(spot === '2ND12' && num>=13 && num<=24) win = b.amount * 3;
+        else if(spot === '3RD12' && num>=25 && num<=36) win = b.amount * 3;
+        
+        if(win > 0) addWin(b.username, b.socketId, win, "Roulette");
+    });
+}
+
+function processBaccaratWinners(res) {
+    bets.baccarat.forEach(b => {
+        let win = 0;
+        if(b.bet === res.winner) {
+            if(res.winner === 'TIE') win = b.amount * 9;
+            else if(res.winner === 'PLAYER') win = b.amount * 2;
+            else if(res.winner === 'BANKER') win = b.amount * 1.95;
+        }
+        if(win > 0) addWin(b.username, b.socketId, Math.floor(win), "Baccarat");
+    });
+}
+
+function addWin(username, socketId, amount, game) {
+    if(users[username]) {
+        users[username].balance += amount;
+        logHistory(username, `WIN +${amount} (${game})`, users[username].balance);
+        io.to(socketId).emit('update_balance', users[username].balance);
+        io.to(socketId).emit('notification', { msg: `WIN! +${amount}`, duration: 3000 });
+        saveDatabase();
+    }
+}
+
 function playBaccaratHand() {
     let p = (Math.floor(Math.random()*10) + Math.floor(Math.random()*10)) % 10;
     let b = (Math.floor(Math.random()*10) + Math.floor(Math.random()*10)) % 10;
@@ -82,129 +142,140 @@ function playBaccaratHand() {
     return { pScore: p, bScore: b, winner: p > b ? 'PLAYER' : (b > p ? 'BANKER' : 'TIE') };
 }
 
-// --- WIN PROCESSING ---
-function processColorWinners(res) {
-    bets.color.forEach(b => {
-        let matches = res.filter(c => c === b.bet).length;
-        if(matches > 0) addWin(b.user, b.sock, b.amt * (matches + 1), "Color Game");
-    });
-}
-function processRouletteWinners(res) {
-    let num = parseInt(res.n);
-    bets.roulette.forEach(b => {
-        let win = 0;
-        if(b.bet === res.n) win = b.amt * 36;
-        else if(b.bet === res.c) win = b.amt * 2;
-        else if(b.bet === 'EVEN' && num>0 && num%2===0) win = b.amt * 2;
-        else if(b.bet === 'ODD' && num>0 && num%2!==0) win = b.amt * 2;
-        if(win > 0) addWin(b.user, b.sock, win, "Roulette");
-    });
-}
-function processBaccaratWinners(res) {
-    bets.baccarat.forEach(b => {
-        let win = 0;
-        if(b.bet === res.winner) {
-            if(res.winner === 'TIE') win = b.amt * 9;
-            else if(res.winner === 'PLAYER') win = b.amt * 2;
-            else if(res.winner === 'BANKER') win = b.amt * 1.95;
-        }
-        if(win > 0) addWin(b.user, b.sock, Math.floor(win), "Baccarat");
-    });
-}
-function addWin(user, sock, amt, game) {
-    if(users[user]) {
-        users[user].balance += amt;
-        io.to(sock).emit('update_balance', users[user].balance);
-        io.to(sock).emit('win', { amt: amt, game: game });
-    }
-    saveDB();
-}
-
 // --- SOCKETS ---
 io.on('connection', (socket) => {
-    // Auth
-    socket.on('login', (d) => {
-        if(users[d.u] && users[d.u].password === d.p) {
-            activePlayers[socket.id] = d.u;
-            socket.emit('login_ok', { u: d.u, b: users[d.u].balance });
-        } else socket.emit('err', "Invalid Login");
-    });
+    // Sync Initial State
+    let currentSeek = musicState.playing ? musicState.timestamp + (Date.now() - musicState.lastUpdate)/1000 : musicState.timestamp;
+    socket.emit('music_sync', { ...musicState, seek: currentSeek });
+    socket.emit('active_players_list', Object.values(activePlayers));
+
+    // AUTH (FIXED: Supports both 'username' and 'u' for compatibility)
     socket.on('register', (d) => {
-        if(!users[d.u]) {
-            users[d.u] = { password: d.p, balance: 1000 };
-            activePlayers[socket.id] = d.u;
-            saveDB();
-            socket.emit('login_ok', { u: d.u, b: 1000 });
-        } else socket.emit('err', "Username Taken");
+        let u = d.username || d.u;
+        let p = d.password || d.p;
+        if(!u || !p) return socket.emit('login_error', "Missing Fields");
+        
+        if(users[u]) {
+            socket.emit('login_error', "Username Taken");
+        } else {
+            users[u] = { password: p, balance: 1000, history: [] }; // Free 1000
+            saveDatabase();
+            doLogin(socket, u);
+        }
     });
 
-    // Bets
-    function placeBet(sock, game, d) {
+    socket.on('login', (d) => {
+        let u = d.username || d.u;
+        let p = d.password || d.p;
+        if(users[u] && users[u].password === p) {
+            doLogin(socket, u);
+        } else {
+            socket.emit('login_error', "Invalid Credentials");
+        }
+    });
+
+    function doLogin(sock, u) {
+        activePlayers[sock.id] = u;
+        sock.join('players');
+        sock.emit('login_success', { username: u, balance: users[u].balance });
+        io.emit('active_players_list', Object.values(activePlayers));
+    }
+
+    // --- BETTING ---
+    function placeBet(sock, game, data) {
         let u = activePlayers[sock.id];
         if(!u || timeLeft <= 0) return;
-        if(users[u].balance >= d.amt) {
-            users[u].balance -= d.amt;
-            bets[game].push({ user: u, sock: sock.id, bet: d.bet, amt: d.amt });
+        let amt = parseInt(data.amount || data.amt); // Handle both namings
+        
+        if(users[u].balance >= amt) {
+            users[u].balance -= amt;
             sock.emit('update_balance', users[u].balance);
-        } else sock.emit('err', "No Funds");
+            
+            // Map data to standard format
+            if(game === 'color') bets.color.push({ username: u, socketId: sock.id, color: data.color, amount: amt });
+            if(game === 'roulette') bets.roulette.push({ username: u, socketId: sock.id, bet: data.bet, amount: amt });
+            if(game === 'baccarat') bets.baccarat.push({ username: u, socketId: sock.id, bet: data.bet, amount: amt });
+        } else {
+            sock.emit('bet_error', "Insufficient Funds");
+        }
     }
-    socket.on('bet_color', (d) => placeBet(socket, 'color', d));
+
+    socket.on('place_bet', (d) => placeBet(socket, 'color', d));
     socket.on('bet_roulette', (d) => placeBet(socket, 'roulette', d));
     socket.on('bet_baccarat', (d) => placeBet(socket, 'baccarat', d));
 
-    // Blackjack
+    // --- BLACKJACK ---
     socket.on('bj_deal', (amt) => {
         let u = activePlayers[socket.id];
         if(!u || users[u].balance < amt) return;
         users[u].balance -= amt;
         socket.emit('update_balance', users[u].balance);
+        
         let deck = createDeck();
         let pHand = [draw(deck), draw(deck)];
         let dHand = [draw(deck), draw(deck)];
-        socket.emit('bj_state', { pHand, dUp: dHand[0], dHide: dHand[1], deck, amt, turn: 'PLAYER' });
+        socket.emit('bj_state', { pHand, dUp: dHand[0], dHide: dHand[1], deck, amt });
     });
+    
     socket.on('bj_hit', (state) => {
         let card = draw(state.deck);
         state.pHand.push(card);
         if(handVal(state.pHand) > 21) socket.emit('bj_bust', state);
         else socket.emit('bj_update', { pHand: state.pHand });
     });
+
     socket.on('bj_stand', (state) => {
         let u = activePlayers[socket.id];
         let dHand = [state.dUp, state.dHide];
-        let deck = state.deck;
-        while(handVal(dHand) < 17) dHand.push(draw(deck));
+        while(handVal(dHand) < 17) dHand.push(draw(state.deck));
+        
         let pVal = handVal(state.pHand);
         let dVal = handVal(dHand);
         let win = 0;
         let res = "LOSE";
+
         if(dVal > 21 || pVal > dVal) { res = "WIN"; win = state.amt * 2; }
         else if (pVal === dVal) { res = "PUSH"; win = state.amt; }
+        
         if(win > 0) {
             users[u].balance += win;
             socket.emit('update_balance', users[u].balance);
+            socket.emit('notification', { msg: `BJ: ${res} (+${win})` });
+            saveDatabase();
         }
         socket.emit('bj_end', { dHand, result: res, win });
-        saveDB();
     });
 
-    // --- ADMIN LOGIC ---
-    socket.on('admin_req_data', () => {
-        socket.emit('admin_data_resp', { users: users, active: activePlayers });
+    // --- CHAT & ADMIN ---
+    socket.on('chat_msg', (msg) => {
+        let u = activePlayers[socket.id];
+        if(u) io.emit('chat_broadcast', { user: u, msg: msg, type: 'public' });
     });
-    socket.on('admin_add_credits', (d) => {
+    
+    socket.on('support_msg', (msg) => {
+        let u = activePlayers[socket.id];
+        if(u) {
+            let t = { user: u, msg: msg, time: Date.now() };
+            supportHistory.push(t);
+            io.emit('admin_data_resp', { users, active: activePlayers, support: supportHistory }); // Notify admin
+            socket.emit('chat_broadcast', { user: "YOU", msg: msg, type: 'support_sent' });
+        }
+    });
+
+    socket.on('admin_req_data', () => socket.emit('admin_data_resp', { users, active: activePlayers, support: supportHistory }));
+    socket.on('admin_add', (d) => {
         if(users[d.u]) {
             users[d.u].balance += parseInt(d.amt);
-            saveDB();
-            // Find player socket to update them live
+            saveDatabase();
+            socket.emit('admin_data_resp', { users, active: activePlayers, support: supportHistory });
+            // Find player socket
             for(let [sid, name] of Object.entries(activePlayers)) {
                 if(name === d.u) io.to(sid).emit('update_balance', users[d.u].balance);
             }
-            socket.emit('admin_data_resp', { users: users, active: activePlayers });
         }
     });
 
-    socket.on('disconnect', () => delete activePlayers[socket.id]);
+    socket.on('disconnect', () => { delete activePlayers[socket.id]; io.emit('active_players_list', Object.values(activePlayers)); });
 });
 
 // BJ Helpers
@@ -218,6 +289,5 @@ function handVal(h) {
     return v;
 }
 
-// RAILWAY PORT FIX
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Casino Running on ${PORT}`));
