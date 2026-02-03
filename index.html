@@ -18,11 +18,6 @@
             user-select: none;
         }
         
-        /* SCROLLBARS */
-        ::-webkit-scrollbar { width: 5px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 10px; }
-
         /* VIEWS SYSTEM */
         .view { display: none; height: 100vh; width: 100%; flex-direction: column; align-items: center; justify-content: center; }
         .view.active { display: flex; }
@@ -41,253 +36,138 @@
         .btn-main:hover { transform: scale(1.05); filter: brightness(1.2); }
         input { padding: 12px; border-radius: 4px; border: 1px solid #555; background: rgba(0,0,0,0.5); color: white; text-align: center; font-size: 16px; margin: 5px; }
 
-        /* --- COLOR GAME (3-COLUMN) --- */
-        .cg-container { display: grid; grid-template-columns: 260px 1fr 260px; gap: 20px; width: 95%; height: 90vh; max-width: 1600px; }
-        .side-panel {
-            background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
-            display: flex; flex-direction: column; overflow: hidden;
+        /* --- ROULETTE STYLES (PlayPager Inspired) --- */
+        .roulette-wrapper {
+            display: flex; flex-direction: row; align-items: center; justify-content: center;
+            width: 100%; height: 100%; gap: 20px;
         }
-        .panel-header { padding: 15px; font-weight: 800; color: #FFD700; border-bottom: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.4); letter-spacing: 1px; }
-        .panel-body { flex-grow: 1; overflow-y: auto; padding: 10px; text-align: left; }
-        .pl-item { padding: 5px 10px; font-size: 13px; color: #ccc; border-bottom: 1px solid rgba(255,255,255,0.05); }
-
-        /* GAME WRAPPER */
-        .game-wrapper {
-            background: rgba(15, 20, 25, 0.8); backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 16px;
-            display: flex; flex-direction: column; overflow: hidden;
-            box-shadow: 0 0 50px rgba(0,0,0,0.5); position: relative;
+        .wheel-section {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            flex: 1; min-width: 300px;
         }
-        .btn-back-lobby { position: absolute; top: 10px; left: 10px; padding: 5px 15px; background: #333; color: white; border: 1px solid #555; border-radius: 4px; cursor: pointer; z-index: 20; font-weight: bold; }
-        .hud-header { padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.2); border-bottom: 1px solid rgba(255,255,255,0.1); height: 50px; }
-
-        /* --- ROULETTE SPECIFIC (HORIZONTAL TABLE) --- */
-        .roulette-container {
-            display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%;
-        }
-        
-        /* WHEEL ANIMATION */
-        .wheel-box {
-            position: relative; width: 300px; height: 300px; margin-bottom: 20px;
-            border-radius: 50%; box-shadow: 0 0 30px black; border: 5px solid #111;
-            background: #000;
+        .wheel-container {
+            position: relative; width: 350px; height: 350px; border-radius: 50%;
+            border: 8px solid #222; box-shadow: 0 0 50px black; background: #000;
         }
         .wheel-img { width: 100%; height: 100%; border-radius: 50%; transition: transform 4s cubic-bezier(0.1, 0.8, 0.1, 1); }
-        .wheel-marker { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); color: #FFD700; font-size: 30px; z-index: 10; text-shadow: 0 2px 2px black; }
+        .wheel-marker { position: absolute; top: -15px; left: 50%; transform: translateX(-50%); color: gold; font-size: 40px; z-index: 10; text-shadow: 0 2px 5px black; }
         
-        /* BETTING TABLE (RECREATED FROM PHOTO) */
-        .table-wrapper {
-            background: #0f3d26; /* Classic Felt Green */
-            padding: 15px; border-radius: 10px; border: 8px solid #3e2723; /* Wood trim */
-            box-shadow: 0 10px 30px black;
-            display: inline-block;
+        .table-section {
+            flex: 2; display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-
-        .r-grid {
+        
+        /* CSS GRID BETTING TABLE (Recreated from your photo) */
+        .r-table {
             display: grid;
-            grid-template-columns: 50px repeat(12, 45px) 40px; /* 0/00 | Numbers | 2to1 */
-            grid-template-rows: repeat(3, 45px) 40px 40px; /* Numbers | Dozens | Even/Odd */
+            grid-template-columns: 50px repeat(12, 50px) 40px; 
+            grid-template-rows: repeat(3, 50px) 50px 50px;
             gap: 2px;
+            background: #0f3d26; padding: 10px; border-radius: 8px; border: 5px solid #3e2723;
+            box-shadow: 0 20px 50px black;
         }
-
-        .r-cell {
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; color: white; cursor: pointer; border: 1px solid rgba(255,255,255,0.2);
-            font-size: 14px; transition: 0.1s;
+        .rc { 
+            display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; 
+            font-size: 16px; border: 1px solid rgba(255,255,255,0.1); color: white; transition: 0.1s;
         }
-        .r-cell:hover { filter: brightness(1.2); border-color: gold; }
-        .r-cell:active { transform: scale(0.95); }
-
-        /* COLORS */
-        .rc-red { background-color: #d32f2f; }
-        .rc-black { background-color: #222; }
-        .rc-green { background-color: #2e7d32; }
-        .rc-felt { background-color: transparent; border-color: rgba(255,255,255,0.1); font-size: 12px; color: #ccc; }
+        .rc:hover { filter: brightness(1.3); border-color: gold; }
+        .rc:active { transform: scale(0.95); }
         
-        /* SHAPES */
-        .r-zero { grid-row: 1 / span 3; grid-column: 1; display: flex; flex-direction: column; } /* 0 & 00 */
-        .r-zero div { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; }
-        .r-2to1 { grid-row: span 1; background: transparent; writing-mode: vertical-rl; text-orientation: mixed; font-size: 11px; }
-
+        .rc-red { background: #d32f2f; } .rc-black { background: #222; } .rc-green { background: #2e7d32; }
+        .rc-felt { background: transparent; font-size: 12px; color: #ddd; }
+        
         /* CHIPS */
-        .chip-rack { display: flex; gap: 8px; background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 30px; margin-bottom: 15px; justify-content: center; }
-        .chip { width: 45px; height: 45px; border-radius: 50%; border: 2px solid #444; background: #222; color: #888; font-weight: 700; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .chip.active { border-color: #FFD700; color: #FFD700; background: rgba(255, 215, 0, 0.1); transform: scale(1.1); }
+        .chip-rack { display: flex; gap: 10px; background: rgba(0,0,0,0.5); padding: 5px 20px; border-radius: 30px; margin-top: 15px; }
+        .chip { width: 50px; height: 50px; border-radius: 50%; border: 3px dashed #666; background: #222; color: #aaa; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer; }
+        .chip.active { border-color: gold; color: gold; background: rgba(255,215,0,0.1); transform: scale(1.1); box-shadow: 0 0 10px gold; }
 
-        /* TOAST & CHAT UI */
+        /* TOAST */
         #toastBox { position: fixed; top: 50px; left: 50%; transform: translateX(-50%); z-index: 20000; pointer-events: none; }
         .toast { background: rgba(0,0,0,0.9); border: 2px solid gold; padding: 15px; border-radius: 8px; color: gold; font-weight: bold; margin-bottom: 5px; animation: slideDown 0.3s forwards; }
         @keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-        
-        .chat-tabs { display: flex; border-bottom: 1px solid rgba(255,255,255,0.15); }
-        .tab-btn { flex: 1; padding: 10px; background: transparent; border: none; color: #888; font-family: 'Rajdhani'; font-weight: bold; cursor: pointer; border-bottom: 2px solid transparent; }
-        .tab-btn.active { color: white; border-bottom-color: #FFD700; background: rgba(255,255,255,0.05); }
-        .chat-view-panel { display: none; flex-grow: 1; flex-direction: column; overflow: hidden; }
-        .chat-view-panel.active { display: flex; }
-        .chat-msg { background: rgba(0,0,0,0.3); padding: 8px 10px; border-radius: 6px; margin-bottom: 6px; font-size: 12px; line-height: 1.3; word-wrap: break-word; text-align: left; }
-        .chat-input-area { padding: 10px; border-top: 1px solid rgba(255,255,255,0.15); display: flex; gap: 5px; }
-        .chat-input { flex-grow: 1; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: white; padding: 8px; border-radius: 4px; outline: none; }
+
+        /* MOBILE */
+        @media (max-width: 768px) {
+            .roulette-wrapper { flex-direction: column; }
+            .wheel-container { width: 250px; height: 250px; }
+            .r-table { grid-template-columns: 30px repeat(12, 28px) 20px; grid-template-rows: repeat(3, 30px) 30px 30px; gap: 1px; }
+            .rc { font-size: 10px; }
+        }
     </style>
 </head>
 <body>
 
     <div id="toastBox"></div>
-    <audio id="bgMusic"></audio>
 
     <div id="v-auth" class="view active">
-        <h1 style="color:#FFD700; font-size: 60px; text-shadow: 0 0 20px rgba(255,215,0,0.5);">GRAND CASINO</h1>
+        <h1 style="color:gold; font-size: 60px;">GRAND CASINO</h1>
         <div class="glass-panel">
-            <h3 id="auth-title" style="margin-top:0; color:#ccc;">MEMBER LOGIN</h3>
+            <h3 id="auth-title">MEMBER LOGIN</h3>
             <input id="u-in" placeholder="Username"><br>
             <input id="p-in" type="password" placeholder="Password"><br><br>
             <button id="btn-auth-action" class="btn-main" onclick="submitAuth()">ENTER CASINO</button><br>
-            <button id="btn-auth-toggle" style="background:transparent; border:none; color:#bbb; margin-top:15px; text-decoration: underline; cursor:pointer;" onclick="toggleAuthMode()">Register New Account</button>
+            <button id="btn-auth-toggle" style="background:transparent; border:none; color:#aaa; margin-top:15px; text-decoration: underline; cursor:pointer;" onclick="toggleAuthMode()">Register New Account</button>
         </div>
     </div>
 
     <div id="v-home" class="view">
         <div class="glass-panel" style="width: 80%; max-width: 800px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-                <h2 style="margin:0;">WELCOME, <span id="home-user" style="color:#FFD700;">PLAYER</span></h2>
-                <div style="text-align:right;">BALANCE: <span id="home-bal" style="color:#FFD700; font-size:24px;">0</span></div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                <h2>WELCOME, <span id="home-user" style="color:gold;">PLAYER</span></h2>
+                <h2>BAL: <span id="home-bal" style="color:gold;">0</span></h2>
             </div>
             <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 20px;">
-                <button class="btn-main" onclick="nav('v-color')" style="background: linear-gradient(45deg, #FFD700, #FFA000);">COLOR GAME</button>
                 <button class="btn-main" onclick="nav('v-roulette')" style="background: linear-gradient(45deg, #00E5FF, #0097A7); color:white;">ROULETTE</button>
-                <button class="btn-main" onclick="nav('v-blackjack')" style="background: linear-gradient(45deg, #00C853, #007E33); color:white;">BLACKJACK</button>
-                <button class="btn-main" onclick="nav('v-baccarat')" style="background: linear-gradient(45deg, #FF4444, #CC0000); color:white;">BACCARAT</button>
-            </div>
-            <button onclick="openAdmin()" style="margin-top:20px; background:rgba(255,255,255,0.1); border:none; color:#888; padding:5px 10px; cursor:pointer;">ADMIN PANEL</button>
-        </div>
-    </div>
-
-    <div id="v-color" class="view">
-        <div class="cg-container">
-            <div class="side-panel">
-                <div class="panel-header">ACTIVE PLAYERS</div>
-                <div class="panel-body" id="activeListBody"></div>
-            </div>
-
-            <div class="game-wrapper">
-                <button class="btn-back-lobby" onclick="nav('v-home')">LOBBY</button>
-                
-                <div class="hud-header" style="justify-content:center;">
-                    <div style="position:absolute; right:20px; text-align:right;">
-                        <div style="font-size:10px; color:#aaa;">CREDITS</div>
-                        <div id="bal-color" style="font-size:24px; color:#FFD700; font-weight:800;">0</div>
-                    </div>
-                </div>
-
-                <div class="game-focus">
-                    <div class="status-text" id="status">BETS OPEN</div>
-                    <div id="timer" style="font-size: 90px; color:cyan;">20</div>
-                    <div class="dice-row" style="display:flex; gap:20px;">
-                        <div id="d1" class="die" style="width:90px;height:90px;background:#222;border:3px solid #555;">?</div>
-                        <div id="d2" class="die" style="width:90px;height:90px;background:#222;border:3px solid #555;">?</div>
-                        <div id="d3" class="die" style="width:90px;height:90px;background:#222;border:3px solid #555;">?</div>
-                    </div>
-                </div>
-
-                <div class="betting-panel">
-                    <div class="chip-rack">
-                        <div class="chip active" onclick="setChip(50, this)">50</div>
-                        <div class="chip" onclick="setChip(100, this)">100</div>
-                        <div class="chip" onclick="setChip(500, this)">500</div>
-                        <div class="chip" onclick="setChip(1000, this)">1K</div>
-                    </div>
-                    <div class="bet-grid" style="display:grid; grid-template-columns:repeat(6,1fr); gap:10px;">
-                        <div class="bet-card" style="background:linear-gradient(135deg,#d32f2f,#b71c1c);height:100px;border-radius:8px;" onclick="betC('RED')">RED <div class="card-amount" id="bRED">0</div></div>
-                        <div class="bet-card" style="background:linear-gradient(135deg,#388e3c,#1b5e20);height:100px;border-radius:8px;" onclick="betC('GREEN')">GREEN <div class="card-amount" id="bGREEN">0</div></div>
-                        <div class="bet-card" style="background:linear-gradient(135deg,#1976d2,#0d47a1);height:100px;border-radius:8px;" onclick="betC('BLUE')">BLUE <div class="card-amount" id="bBLUE">0</div></div>
-                        <div class="bet-card" style="background:linear-gradient(135deg,#f06292,#c2185b);height:100px;border-radius:8px;" onclick="betC('PINK')">PINK <div class="card-amount" id="bPINK">0</div></div>
-                        <div class="bet-card" style="background:linear-gradient(135deg,#f5f5f5,#bdbdbd);height:100px;border-radius:8px;color:black;" onclick="betC('WHITE')">WHITE <div class="card-amount" id="bWHITE">0</div></div>
-                        <div class="bet-card" style="background:linear-gradient(135deg,#fbc02d,#f57f17);height:100px;border-radius:8px;color:black;" onclick="betC('YELLOW')">YELLOW <div class="card-amount" id="bYELLOW">0</div></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="side-panel">
-                <div class="chat-tabs">
-                    <button class="tab-btn active" onclick="switchChat('public')" id="tab-public">PUBLIC</button>
-                    <button class="tab-btn" onclick="switchChat('support')" id="tab-support">SUPPORT</button>
-                </div>
-                <div id="cv-public" class="chat-view-panel active">
-                    <div class="panel-body" id="chatList"></div>
-                    <div class="chat-input-area">
-                        <input id="chatInput" class="chat-input" placeholder="Type here...">
-                        <button onclick="sendChat()" style="background:#FFD700; border:none; font-weight:bold; border-radius:4px; padding:0 10px;">></button>
-                    </div>
-                </div>
-                <div id="cv-support" class="chat-view-panel">
-                    <div class="panel-body" id="supportList"><div style="text-align:center; color:#666; font-size:12px; margin-top:10px;">Direct line to Admin.</div></div>
-                    <div class="chat-input-area">
-                        <input id="supportInput" class="chat-input" placeholder="Help me...">
-                        <button onclick="sendSupport()" style="background:#00E5FF; border:none; font-weight:bold; border-radius:4px; padding:0 10px;">></button>
-                    </div>
-                </div>
+                <button class="btn-main" onclick="alert('Use Roulette for now!')" style="background: #333; color:#666;">OTHER GAMES</button>
             </div>
         </div>
     </div>
 
-    <div id="v-roulette" class="view" style="background: rgba(0,0,0,0.8);">
-        <button class="btn-back-lobby" onclick="nav('v-home')">LOBBY</button>
+    <div id="v-roulette" class="view" style="background: radial-gradient(circle, #222, #000);">
+        <button onclick="nav('v-home')" style="position:absolute; top:20px; left:20px; padding:10px; background:#333; color:white; border:1px solid #555; cursor:pointer;">LOBBY</button>
         
-        <div class="roulette-container">
-            <div class="wheel-box">
-                <img src="wheel.png" class="wheel-img" id="wheelImg" alt="Roulette Wheel">
-                <div class="wheel-marker">▼</div>
+        <div class="roulette-wrapper">
+            <div class="wheel-section">
+                <div class="wheel-container">
+                    <img src="wheel.png" class="wheel-img" id="wheelImg">
+                    <div class="wheel-marker">▼</div>
+                </div>
+                <h1 id="res-roul" style="font-size:40px; color:gold; margin:20px;">BETS OPEN</h1>
+                <div id="timer" style="font-size:30px; color:cyan;">20</div>
             </div>
-            
-            <div id="res-roul" style="font-size: 30px; font-weight: bold; margin: 10px; color: #FFD700; height: 40px;">BETS OPEN</div>
-            <div id="timer-roul" style="color: cyan; font-size: 20px; margin-bottom: 10px;">20</div>
 
-            <div class="table-wrapper">
-                <div class="r-grid" id="rouletteGrid">
-                    <div class="r-zero">
-                        <div class="r-cell rc-green" style="border-bottom:1px solid rgba(255,255,255,0.2); border-radius: 4px 4px 0 0;" onclick="betR('0')">0</div>
-                        <div class="r-cell rc-green" style="border-radius: 0 0 4px 4px;" onclick="betR('00')">00</div>
+            <div class="table-section">
+                <div style="margin-bottom:10px; color:gold; font-size:20px;">BALANCE: <span id="bal-roul">0</span></div>
+                
+                <div class="r-table" id="rGrid">
+                    <div style="grid-row:1/span 3; grid-column:1; display:flex; flex-direction:column;">
+                        <div class="rc rc-green" style="flex:1; border-bottom:1px solid rgba(255,255,255,0.2);" onclick="betR('0')">0</div>
+                        <div class="rc rc-green" style="flex:1;" onclick="betR('00')">00</div>
                     </div>
 
-                    <div class="r-cell rc-felt r-2to1" style="grid-column: 14; grid-row: 1;" onclick="betR('2TO1_1')">2 to 1</div>
-                    <div class="r-cell rc-felt r-2to1" style="grid-column: 14; grid-row: 2;" onclick="betR('2TO1_2')">2 to 1</div>
-                    <div class="r-cell rc-felt r-2to1" style="grid-column: 14; grid-row: 3;" onclick="betR('2TO1_3')">2 to 1</div>
+                    <div class="rc rc-felt" style="grid-row:1; grid-column:14;" onclick="betR('2TO1_3')">2:1</div>
+                    <div class="rc rc-felt" style="grid-row:2; grid-column:14;" onclick="betR('2TO1_2')">2:1</div>
+                    <div class="rc rc-felt" style="grid-row:3; grid-column:14;" onclick="betR('2TO1_1')">2:1</div>
 
-                    <div class="r-cell rc-felt" style="grid-row: 4; grid-column: 2 / span 4;" onclick="betR('1ST12')">1st 12</div>
-                    <div class="r-cell rc-felt" style="grid-row: 4; grid-column: 6 / span 4;" onclick="betR('2ND12')">2nd 12</div>
-                    <div class="r-cell rc-felt" style="grid-row: 4; grid-column: 10 / span 4;" onclick="betR('3RD12')">3rd 12</div>
+                    <div class="rc rc-felt" style="grid-row:4; grid-column:2/span 4;" onclick="betR('1ST12')">1st 12</div>
+                    <div class="rc rc-felt" style="grid-row:4; grid-column:6/span 4;" onclick="betR('2ND12')">2nd 12</div>
+                    <div class="rc rc-felt" style="grid-row:4; grid-column:10/span 4;" onclick="betR('3RD12')">3rd 12</div>
 
-                    <div class="r-cell rc-felt" style="grid-row: 5; grid-column: 2 / span 2;" onclick="betR('1-18')">1-18</div>
-                    <div class="r-cell rc-felt" style="grid-row: 5; grid-column: 4 / span 2;" onclick="betR('EVEN')">EVEN</div>
-                    <div class="r-cell rc-red" style="grid-row: 5; grid-column: 6 / span 2;" onclick="betR('RED')"></div>
-                    <div class="r-cell rc-black" style="grid-row: 5; grid-column: 8 / span 2;" onclick="betR('BLACK')"></div>
-                    <div class="r-cell rc-felt" style="grid-row: 5; grid-column: 10 / span 2;" onclick="betR('ODD')">ODD</div>
-                    <div class="r-cell rc-felt" style="grid-row: 5; grid-column: 12 / span 2;" onclick="betR('19-36')">19-36</div>
+                    <div class="rc rc-felt" style="grid-row:5; grid-column:2/span 2;" onclick="betR('1-18')">1-18</div>
+                    <div class="rc rc-felt" style="grid-row:5; grid-column:4/span 2;" onclick="betR('EVEN')">EVEN</div>
+                    <div class="rc rc-red" style="grid-row:5; grid-column:6/span 2;" onclick="betR('RED')"></div>
+                    <div class="rc rc-black" style="grid-row:5; grid-column:8/span 2;" onclick="betR('BLACK')"></div>
+                    <div class="rc rc-felt" style="grid-row:5; grid-column:10/span 2;" onclick="betR('ODD')">ODD</div>
+                    <div class="rc rc-felt" style="grid-row:5; grid-column:12/span 2;" onclick="betR('19-36')">19-36</div>
+                </div>
+
+                <div class="chip-rack">
+                    <div class="chip active" onclick="setChip(50, this)">50</div>
+                    <div class="chip" onclick="setChip(100, this)">100</div>
+                    <div class="chip" onclick="setChip(500, this)">500</div>
+                    <div class="chip" onclick="setChip(1000, this)">1K</div>
                 </div>
             </div>
-            
-            <div class="chip-rack" style="margin-top: 15px;">
-                <div class="chip active" onclick="setChip(50, this)">50</div>
-                <div class="chip" onclick="setChip(100, this)">100</div>
-                <div class="chip" onclick="setChip(500, this)">500</div>
-                <div class="chip" onclick="setChip(1000, this)">1K</div>
-            </div>
         </div>
-    </div>
-
-    <div id="v-blackjack" class="view" style="background: radial-gradient(circle, #1a4d2e 0%, #0d2616 100%);">
-        <button class="btn-back-lobby" onclick="nav('v-home')">LOBBY</button>
-        <div style="color:white;">BLACKJACK PLACEHOLDER</div>
-    </div>
-    <div id="v-baccarat" class="view" style="background: radial-gradient(circle, #5a0000 0%, #2a0000 100%);">
-        <button class="btn-back-lobby" onclick="nav('v-home')">LOBBY</button>
-        <div style="color:white;">BACCARAT PLACEHOLDER</div>
-    </div>
-
-    <div id="v-admin" class="view" style="background:#111;">
-        <button class="btn-back-lobby" onclick="nav('v-home')">EXIT</button>
-        <h2 style="color:#FFD700">ADMIN PANEL</h2>
-        <div id="ad-list" style="margin-top:20px; max-width:600px; width:100%; border:1px solid #333; color:white;"></div>
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
@@ -313,7 +193,8 @@
             const u = document.getElementById('u-in').value;
             const p = document.getElementById('p-in').value;
             if(!u || !p) return alert("Fill all fields");
-            s.emit(isRegister ? 'register' : 'login', {username:u, password:p});
+            // Sends both formats to be safe
+            s.emit(isRegister ? 'register' : 'login', {username:u, password:p, u:u, p:p});
         }
         s.on('login_success', d => {
             nav('v-home');
@@ -322,10 +203,9 @@
         });
         s.on('login_error', m => alert(m));
 
-        // --- SHARED ---
         function updateBal(b) {
             document.getElementById('home-bal').innerText = b;
-            document.getElementById('bal-color').innerText = b;
+            document.getElementById('bal-roul').innerText = b;
         }
         s.on('update_balance', updateBal);
         
@@ -334,124 +214,59 @@
             const d = document.createElement('div'); d.className='toast'; d.innerText=msg;
             b.appendChild(d); setTimeout(()=>d.remove(), 3000);
         }
-        s.on('win', d => toast(`WON ${d.amt} on ${d.game}!`));
         s.on('notification', d => toast(d.msg));
 
-        // --- CHIP SELECTION ---
+        // --- ROULETTE GENERATION ---
+        // Generating numbers 1-36 in 3 rows
+        // Top Row: 3, 6, 9... | Mid: 2, 5, 8... | Bot: 1, 4, 7...
+        // Columns 2 to 13
+        const rGrid = document.getElementById('rGrid');
+        const R_REDS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
+        
+        // Loop columns 1 to 12 (represents betting columns)
+        for(let col=1; col<=12; col++) {
+            // Row 3 (Top visually): 3 * col
+            createCell(3 * col, 1, col + 1);
+            // Row 2 (Mid visually): 3 * col - 1
+            createCell(3 * col - 1, 2, col + 1);
+            // Row 1 (Bot visually): 3 * col - 2
+            createCell(3 * col - 2, 3, col + 1);
+        }
+
+        function createCell(num, row, colIdx) {
+            let div = document.createElement('div');
+            div.className = `rc ${R_REDS.includes(num)?'rc-red':'rc-black'}`;
+            div.innerText = num;
+            div.style.gridRow = row;
+            div.style.gridColumn = colIdx;
+            div.onclick = () => betR(num.toString());
+            rGrid.appendChild(div);
+        }
+
         function setChip(v, el) { 
             curChip = v; 
             document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
         }
-
-        // --- COLOR GAME ---
-        function betC(c) { s.emit('place_bet', {color:c, amount:curChip}); }
-        s.on('active_players_list', list => {
-            const el = document.getElementById('activeListBody'); el.innerHTML = "";
-            list.forEach(n => el.innerHTML += `<div class="pl-item"><i class="fas fa-circle"></i> ${n}</div>`);
-        });
-
-        // Chat
-        function switchChat(type) {
-            document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-            document.querySelectorAll('.chat-view-panel').forEach(v=>v.classList.remove('active'));
-            document.getElementById('tab-'+type).classList.add('active');
-            document.getElementById('cv-'+type).classList.add('active');
-        }
-        function sendChat() { const i=document.getElementById('chatInput'); if(i.value){ s.emit('chat_msg', i.value); i.value=''; } }
-        function sendSupport() { const i=document.getElementById('supportInput'); if(i.value){ s.emit('support_msg', i.value); i.value=''; } }
-        s.on('chat_broadcast', d => {
-            const box = (d.type==='public'||d.type==='public_admin') ? document.getElementById('chatList') : document.getElementById('supportList');
-            let col = (d.type.includes('admin') || d.type==='support_reply') ? '#FF4444' : '#FFD700';
-            box.innerHTML += `<div class="chat-msg"><b style="color:${col}">${d.user}:</b> ${d.msg}</div>`;
-        });
-
-        // --- ROULETTE LOGIC ---
-        // Generate Grid 3x12
-        const rGrid = document.getElementById('rouletteGrid');
-        // Standard American Roulette order for visuals usually follows board layout
-        // Row 1 (Top): 3, 6, 9...
-        // Row 2 (Mid): 2, 5, 8...
-        // Row 3 (Bot): 1, 4, 7...
-        // CSS Grid fills Left->Right, then Top->Bottom.
-        // We have 14 columns. Col 1 is 0/00. Col 2-13 are numbers. Col 14 is 2to1.
-        
-        // We need to render the numbers column by column or manually place them.
-        // Manual placement via style grid-column/row is safest.
-        const nums = [
-            {n:1, c:'red', r:3, col:2}, {n:2, c:'black', r:2, col:2}, {n:3, c:'red', r:1, col:2},
-            {n:4, c:'black', r:3, col:3}, {n:5, c:'red', r:2, col:3}, {n:6, c:'black', r:1, col:3},
-            {n:7, c:'red', r:3, col:4}, {n:8, c:'black', r:2, col:4}, {n:9, c:'red', r:1, col:4},
-            {n:10, c:'black', r:3, col:5}, {n:11, c:'black', r:2, col:5}, {n:12, c:'red', r:1, col:5},
-            {n:13, c:'black', r:3, col:6}, {n:14, c:'red', r:2, col:6}, {n:15, c:'black', r:1, col:6},
-            {n:16, c:'red', r:3, col:7}, {n:17, c:'black', r:2, col:7}, {n:18, c:'red', r:1, col:7},
-            {n:19, c:'red', r:3, col:8}, {n:20, c:'black', r:2, col:8}, {n:21, c:'red', r:1, col:8},
-            {n:22, c:'black', r:3, col:9}, {n:23, c:'red', r:2, col:9}, {n:24, c:'black', r:1, col:9},
-            {n:25, c:'red', r:3, col:10}, {n:26, c:'black', r:2, col:10}, {n:27, c:'red', r:1, col:10},
-            {n:28, c:'black', r:3, col:11}, {n:29, c:'black', r:2, col:11}, {n:30, c:'red', r:1, col:11},
-            {n:31, c:'black', r:3, col:12}, {n:32, c:'red', r:2, col:12}, {n:33, c:'black', r:1, col:12},
-            {n:34, c:'red', r:3, col:13}, {n:35, c:'black', r:2, col:13}, {n:36, c:'red', r:1, col:13}
-        ];
-
-        nums.forEach(obj => {
-            let div = document.createElement('div');
-            div.className = `r-cell rc-${obj.c}`;
-            div.innerText = obj.n;
-            div.style.gridRow = obj.r;
-            div.style.gridColumn = obj.col;
-            div.onclick = () => betR(obj.n.toString());
-            rGrid.appendChild(div);
-        });
-
         function betR(spot) { s.emit('bet_roulette', {bet:spot, amt:curChip}); toast(`Bet ${spot}`); }
 
-        // --- TIMERS & RESULTS ---
+        // --- GAME LOGIC ---
         s.on('timer_update', t => {
             document.getElementById('timer').innerText = t;
-            document.getElementById('timer-roul').innerText = t;
-            document.getElementById('status').innerText = "BETS OPEN";
             document.getElementById('res-roul').innerText = "BETS OPEN";
-            document.getElementById('res-roul').style.color = "#FFD700";
+            document.getElementById('res-roul').style.color = "gold";
         });
-
         s.on('game_rolling', () => {
             document.getElementById('timer').innerText = "--";
-            document.getElementById('status').innerText = "ROLLING...";
             document.getElementById('res-roul').innerText = "SPINNING...";
-            document.getElementById('wheelImg').style.transform = `rotate(${360 * 5 + Math.random() * 360}deg)`; // Spin animation
-            
-            // Dice Anim
-            let cols = ['RED','GREEN','BLUE','YELLOW','PINK','WHITE'];
-            window.rollInt = setInterval(() => {
-                ['d1','d2','d3'].forEach(id => document.getElementById(id).className = `die ${cols[Math.floor(Math.random()*6)]}`);
-            }, 100);
+            document.getElementById('wheelImg').style.transform = `rotate(${360 * 5 + Math.random() * 360}deg)`;
         });
-
-        s.on('game_result', res => {
-            clearInterval(window.rollInt);
-            document.getElementById('status').innerText = "RESULT";
-            ['d1','d2','d3'].forEach((id,i) => document.getElementById(id).className = `die ${res[i]}`);
-        });
-
-        s.on('result_roulette', res => {
-            // wheel spin reset handled by CSS transition usually, but here we just show result text
-            document.getElementById('res-roul').innerText = `${res.n} ${res.c}`;
-            document.getElementById('res-roul').style.color = res.c === 'RED' ? '#d32f2f' : (res.c === 'BLACK' ? 'white' : '#2e7d32');
+        s.on('result_roulette', d => {
+            document.getElementById('res-roul').innerText = `${d.result.n} ${d.result.c}`;
+            document.getElementById('res-roul').style.color = d.result.c==='RED'?'#ff4444':(d.result.c==='BLACK'?'white':'#00C853');
             document.getElementById('wheelImg').style.transition = 'none';
             document.getElementById('wheelImg').style.transform = 'rotate(0deg)';
-            setTimeout(() => { document.getElementById('wheelImg').style.transition = 'transform 4s cubic-bezier(0.1, 0.8, 0.1, 1)'; }, 100);
-        });
-
-        // --- ADMIN ---
-        function openAdmin() {
-            let p = prompt("Password:");
-            if(p==="Kenm4") { nav('v-admin'); s.emit('admin_req_data'); }
-        }
-        s.on('admin_data_resp', d => {
-            const l = document.getElementById('ad-list'); l.innerHTML='';
-            Object.entries(d.users).forEach(([u, dat]) => {
-                l.innerHTML += `<div style="padding:10px; border-bottom:1px solid #333;">${u} | Bal: ${dat.balance}</div>`;
-            });
+            setTimeout(() => { document.getElementById('wheelImg').style.transition = 'transform 4s cubic-bezier(0.1, 0.8, 0.1, 1)'; }, 50);
         });
 
     </script>
