@@ -24,8 +24,8 @@ app.use(express.static(__dirname));
 app.get('/', (req, res) => { res.sendFile(__dirname + '/index.html'); });
 app.get('/admin', (req, res) => { res.sendFile(__dirname + '/admin.html'); });
 
-// --- GAME STATE ---
-const COLORS = ['RED', 'GREEN', 'BLUE', 'YELLOW', 'PINK', 'WHITE'];
+// --- GAME CONFIG ---
+const DICE_COLORS = ['RED', 'GREEN', 'BLUE', 'YELLOW', 'PINK', 'WHITE'];
 const ROULETTE_NUMS = [
     {n:'0',c:'GREEN'},{n:'28',c:'BLACK'},{n:'9',c:'RED'},{n:'26',c:'BLACK'},{n:'30',c:'RED'},{n:'11',c:'BLACK'},
     {n:'7',c:'RED'},{n:'20',c:'BLACK'},{n:'32',c:'RED'},{n:'17',c:'BLACK'},{n:'5',c:'RED'},{n:'22',c:'BLACK'},
@@ -38,11 +38,9 @@ const ROULETTE_NUMS = [
 
 let timeLeft = 20; 
 let activePlayers = {}; 
-let supportHistory = [];
 let musicState = { playing: false, trackUrl: '', title: 'Waiting...', artist: '', timestamp: 0, lastUpdate: Date.now() };
-
-// Bets Storage
 let bets = { color: [], roulette: [], baccarat: [] };
+let history = { roulette: [] };
 
 // --- MAIN LOOP ---
 setInterval(() => {
@@ -50,28 +48,29 @@ setInterval(() => {
     if(timeLeft >= 0) io.emit('timer_update', timeLeft);
 
     if (timeLeft <= 0) {
-        io.emit('game_rolling'); // Triggers animations
+        io.emit('game_rolling'); 
 
-        // 1. GENERATE RESULTS
-        const diceRes = [COLORS[Math.floor(Math.random()*6)], COLORS[Math.floor(Math.random()*6)], COLORS[Math.floor(Math.random()*6)]];
-        const roulRes = ROULETTE_NUMS[Math.floor(Math.random()*ROULETTE_NUMS.length)];
+        // Generate Results
+        const diceRes = [DICE_COLORS[Math.floor(Math.random()*6)], DICE_COLORS[Math.floor(Math.random()*6)], DICE_COLORS[Math.floor(Math.random()*6)]];
+        const rIndex = Math.floor(Math.random()*ROULETTE_NUMS.length);
+        const roulRes = ROULETTE_NUMS[rIndex];
         const baccRes = playBaccaratHand();
 
-        // 2. RESOLVE (Delay for suspense)
+        // Update History
+        history.roulette.unshift(roulRes);
+        if(history.roulette.length > 10) history.roulette.pop();
+
         setTimeout(() => {
-            // Color Game
+            // Broadcast Results
             io.emit('game_result', diceRes);
             processColorWinners(diceRes);
 
-            // Roulette
-            io.emit('result_roulette', roulRes);
+            io.emit('result_roulette', { result: roulRes, history: history.roulette });
             processRouletteWinners(roulRes);
 
-            // Baccarat
             io.emit('result_baccarat', baccRes);
             processBaccaratWinners(baccRes);
 
-            // Reset
             bets = { color: [], roulette: [], baccarat: [] };
             
             setTimeout(() => { 
@@ -86,10 +85,7 @@ setInterval(() => {
 function processColorWinners(res) {
     bets.color.forEach(b => {
         let matches = res.filter(c => c === b.color).length;
-        if(matches > 0) {
-            let win = b.amount * (matches + 1);
-            addWin(b.username, b.socketId, win, "Color Game");
-        }
+        if(matches > 0) addWin(b.username, b.socketId, b.amount * (matches + 1), "Color Game");
     });
 }
 
@@ -98,16 +94,23 @@ function processRouletteWinners(res) {
     bets.roulette.forEach(b => {
         let win = 0;
         let spot = b.bet;
-        if(spot === res.n) win = b.amount * 36; // Exact
-        else if(spot === res.c) win = b.amount * 2; // Color
-        else if(spot === 'EVEN' && num>0 && num%2===0) win = b.amount * 2;
-        else if(spot === 'ODD' && num>0 && num%2!==0) win = b.amount * 2;
-        else if(spot === '1-18' && num>=1 && num<=18) win = b.amount * 2;
-        else if(spot === '19-36' && num>=19 && num<=36) win = b.amount * 2;
-        else if(spot === '1ST12' && num>=1 && num<=12) win = b.amount * 3;
-        else if(spot === '2ND12' && num>=13 && num<=24) win = b.amount * 3;
-        else if(spot === '3RD12' && num>=25 && num<=36) win = b.amount * 3;
         
+        if(spot === res.n) win = b.amount * 36; // Exact
+        else if(spot === 'RED' && res.c === 'RED') win = b.amount * 2;
+        else if(spot === 'BLACK' && res.c === 'BLACK') win = b.amount * 2;
+        else if(spot === 'EVEN' && num > 0 && num % 2 === 0) win = b.amount * 2;
+        else if(spot === 'ODD' && num > 0 && num % 2 !== 0) win = b.amount * 2;
+        else if(spot === '1-18' && num >= 1 && num <= 18) win = b.amount * 2;
+        else if(spot === '19-36' && num >= 19 && num <= 36) win = b.amount * 2;
+        else if(spot === '1ST12' && num >= 1 && num <= 12) win = b.amount * 3;
+        else if(spot === '2ND12' && num >= 13 && num <= 24) win = b.amount * 3;
+        else if(spot === '3RD12' && num >= 25 && num <= 36) win = b.amount * 3;
+        
+        // 2to1 Columns
+        else if(spot === '2TO1_1' && num > 0 && num % 3 === 1) win = b.amount * 3; // 1, 4, 7...
+        else if(spot === '2TO1_2' && num > 0 && num % 3 === 2) win = b.amount * 3; // 2, 5, 8...
+        else if(spot === '2TO1_3' && num > 0 && num % 3 === 0) win = b.amount * 3; // 3, 6, 9...
+
         if(win > 0) addWin(b.username, b.socketId, win, "Roulette");
     });
 }
@@ -129,7 +132,7 @@ function addWin(username, socketId, amount, game) {
         users[username].balance += amount;
         logHistory(username, `WIN +${amount} (${game})`, users[username].balance);
         io.to(socketId).emit('update_balance', users[username].balance);
-        io.to(socketId).emit('notification', { msg: `WIN! +${amount}`, duration: 3000 });
+        io.to(socketId).emit('notification', { msg: `WIN +${amount}`, duration: 3000 });
         saveDatabase();
     }
 }
@@ -144,34 +147,24 @@ function playBaccaratHand() {
 
 // --- SOCKETS ---
 io.on('connection', (socket) => {
-    // Sync Initial State
     let currentSeek = musicState.playing ? musicState.timestamp + (Date.now() - musicState.lastUpdate)/1000 : musicState.timestamp;
     socket.emit('music_sync', { ...musicState, seek: currentSeek });
     socket.emit('active_players_list', Object.values(activePlayers));
 
-    // AUTH (FIXED: Supports both 'username' and 'u' for compatibility)
+    // AUTH (ROBUST: Checks both 'username' and 'u' keys)
     socket.on('register', (d) => {
         let u = d.username || d.u;
         let p = d.password || d.p;
         if(!u || !p) return socket.emit('login_error', "Missing Fields");
-        
-        if(users[u]) {
-            socket.emit('login_error', "Username Taken");
-        } else {
-            users[u] = { password: p, balance: 1000, history: [] }; // Free 1000
-            saveDatabase();
-            doLogin(socket, u);
-        }
+        if(users[u]) { socket.emit('login_error', "Username Taken"); }
+        else { users[u] = { password: p, balance: 1000, history: [] }; saveDatabase(); doLogin(socket, u); }
     });
 
     socket.on('login', (d) => {
         let u = d.username || d.u;
         let p = d.password || d.p;
-        if(users[u] && users[u].password === p) {
-            doLogin(socket, u);
-        } else {
-            socket.emit('login_error', "Invalid Credentials");
-        }
+        if(users[u] && users[u].password === p) { doLogin(socket, u); }
+        else { socket.emit('login_error', "Invalid Credentials"); }
     });
 
     function doLogin(sock, u) {
@@ -181,99 +174,53 @@ io.on('connection', (socket) => {
         io.emit('active_players_list', Object.values(activePlayers));
     }
 
-    // --- BETTING ---
+    // BETS
     function placeBet(sock, game, data) {
         let u = activePlayers[sock.id];
         if(!u || timeLeft <= 0) return;
-        let amt = parseInt(data.amount || data.amt); // Handle both namings
+        let amt = parseInt(data.amount || data.amt);
         
         if(users[u].balance >= amt) {
             users[u].balance -= amt;
             sock.emit('update_balance', users[u].balance);
-            
-            // Map data to standard format
             if(game === 'color') bets.color.push({ username: u, socketId: sock.id, color: data.color, amount: amt });
             if(game === 'roulette') bets.roulette.push({ username: u, socketId: sock.id, bet: data.bet, amount: amt });
             if(game === 'baccarat') bets.baccarat.push({ username: u, socketId: sock.id, bet: data.bet, amount: amt });
-        } else {
-            sock.emit('bet_error', "Insufficient Funds");
-        }
+        } else { sock.emit('bet_error', "Insufficient Funds"); }
     }
 
     socket.on('place_bet', (d) => placeBet(socket, 'color', d));
     socket.on('bet_roulette', (d) => placeBet(socket, 'roulette', d));
     socket.on('bet_baccarat', (d) => placeBet(socket, 'baccarat', d));
 
-    // --- BLACKJACK ---
+    // BLACKJACK
     socket.on('bj_deal', (amt) => {
         let u = activePlayers[socket.id];
         if(!u || users[u].balance < amt) return;
         users[u].balance -= amt;
         socket.emit('update_balance', users[u].balance);
-        
         let deck = createDeck();
-        let pHand = [draw(deck), draw(deck)];
-        let dHand = [draw(deck), draw(deck)];
-        socket.emit('bj_state', { pHand, dUp: dHand[0], dHide: dHand[1], deck, amt });
+        socket.emit('bj_state', { pHand: [draw(deck), draw(deck)], dUp: draw(deck), dHide: draw(deck), deck, amt });
     });
-    
     socket.on('bj_hit', (state) => {
-        let card = draw(state.deck);
-        state.pHand.push(card);
-        if(handVal(state.pHand) > 21) socket.emit('bj_bust', state);
-        else socket.emit('bj_update', { pHand: state.pHand });
+        let card = draw(state.deck); state.pHand.push(card);
+        if(handVal(state.pHand) > 21) socket.emit('bj_bust', state); else socket.emit('bj_update', { pHand: state.pHand });
     });
-
     socket.on('bj_stand', (state) => {
         let u = activePlayers[socket.id];
         let dHand = [state.dUp, state.dHide];
         while(handVal(dHand) < 17) dHand.push(draw(state.deck));
-        
-        let pVal = handVal(state.pHand);
-        let dVal = handVal(dHand);
-        let win = 0;
-        let res = "LOSE";
-
-        if(dVal > 21 || pVal > dVal) { res = "WIN"; win = state.amt * 2; }
-        else if (pVal === dVal) { res = "PUSH"; win = state.amt; }
-        
-        if(win > 0) {
-            users[u].balance += win;
-            socket.emit('update_balance', users[u].balance);
-            socket.emit('notification', { msg: `BJ: ${res} (+${win})` });
-            saveDatabase();
-        }
+        let pVal = handVal(state.pHand), dVal = handVal(dHand), win = 0, res = "LOSE";
+        if(dVal > 21 || pVal > dVal) { res = "WIN"; win = state.amt * 2; } else if (pVal === dVal) { res = "PUSH"; win = state.amt; }
+        if(win > 0) { users[u].balance += win; socket.emit('update_balance', users[u].balance); saveDatabase(); }
         socket.emit('bj_end', { dHand, result: res, win });
     });
 
-    // --- CHAT & ADMIN ---
-    socket.on('chat_msg', (msg) => {
-        let u = activePlayers[socket.id];
-        if(u) io.emit('chat_broadcast', { user: u, msg: msg, type: 'public' });
-    });
-    
-    socket.on('support_msg', (msg) => {
-        let u = activePlayers[socket.id];
-        if(u) {
-            let t = { user: u, msg: msg, time: Date.now() };
-            supportHistory.push(t);
-            io.emit('admin_data_resp', { users, active: activePlayers, support: supportHistory }); // Notify admin
-            socket.emit('chat_broadcast', { user: "YOU", msg: msg, type: 'support_sent' });
-        }
-    });
-
+    // CHAT & ADMIN
+    socket.on('chat_msg', (msg) => { let u = activePlayers[socket.id]; if(u) io.emit('chat_broadcast', { user: u, msg, type: 'public' }); });
+    socket.on('support_msg', (msg) => { let u = activePlayers[socket.id]; if(u) { supportHistory.push({user:u, msg, time:Date.now()}); io.emit('admin_data_resp', {users, active:activePlayers, support:supportHistory}); socket.emit('chat_broadcast', {user:"YOU", msg, type:'support_sent'}); } });
     socket.on('admin_req_data', () => socket.emit('admin_data_resp', { users, active: activePlayers, support: supportHistory }));
-    socket.on('admin_add', (d) => {
-        if(users[d.u]) {
-            users[d.u].balance += parseInt(d.amt);
-            saveDatabase();
-            socket.emit('admin_data_resp', { users, active: activePlayers, support: supportHistory });
-            // Find player socket
-            for(let [sid, name] of Object.entries(activePlayers)) {
-                if(name === d.u) io.to(sid).emit('update_balance', users[d.u].balance);
-            }
-        }
-    });
+    socket.on('admin_add', (d) => { if(users[d.u]) { users[d.u].balance += parseInt(d.amt); saveDatabase(); socket.emit('admin_data_resp', { users, active: activePlayers, support: supportHistory }); } });
 
     socket.on('disconnect', () => { delete activePlayers[socket.id]; io.emit('active_players_list', Object.values(activePlayers)); });
 });
@@ -282,12 +229,7 @@ io.on('connection', (socket) => {
 const SUITS = ['H','D','C','S']; const VALS = ['2','3','4','5','6','7','8','9','10','J','Q','K','A'];
 function createDeck() { let d=[]; SUITS.forEach(s=>VALS.forEach(v=>d.push({s,v}))); return d.sort(()=>Math.random()-.5); }
 function draw(d) { return d.pop(); }
-function handVal(h) {
-    let v=0, a=0;
-    h.forEach(c => { if(['J','Q','K'].includes(c.v)) v+=10; else if(c.v==='A') { a++; v+=11; } else v+=parseInt(c.v); });
-    while(v>21 && a>0) { v-=10; a--; }
-    return v;
-}
+function handVal(h) { let v=0,a=0; h.forEach(c=>{if(['J','Q','K'].includes(c.v))v+=10;else if(c.v==='A'){a++;v+=11;}else v+=parseInt(c.v);}); while(v>21&&a>0){v-=10;a--;} return v; }
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Casino Running on ${PORT}`));
