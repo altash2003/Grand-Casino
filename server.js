@@ -26,6 +26,7 @@ app.get('/admin', (req, res) => { res.sendFile(__dirname + '/admin.html'); });
 
 // --- GAME CONFIG ---
 const DICE_COLORS = ['RED', 'GREEN', 'BLUE', 'YELLOW', 'PINK', 'WHITE'];
+// American Roulette (0, 00)
 const ROULETTE_NUMS = [
     {n:'0',c:'GREEN'},{n:'28',c:'BLACK'},{n:'9',c:'RED'},{n:'26',c:'BLACK'},{n:'30',c:'RED'},{n:'11',c:'BLACK'},
     {n:'7',c:'RED'},{n:'20',c:'BLACK'},{n:'32',c:'RED'},{n:'17',c:'BLACK'},{n:'5',c:'RED'},{n:'22',c:'BLACK'},
@@ -90,26 +91,33 @@ function processColorWinners(res) {
 }
 
 function processRouletteWinners(res) {
-    let num = parseInt(res.n);
+    // res = { n: "17", c: "BLACK" }
+    let winNumString = res.n; 
+    
     bets.roulette.forEach(b => {
         let win = 0;
-        let spot = b.bet;
+        // b.numbers is an array of strings e.g. ["1", "2"] for a split
+        // If the winning number is in the covered array, they win.
+        // EXCEPTION: Outside bets lose on 0/00 (unless the bet was ON 0 or 00 specifically)
         
-        if(spot === res.n) win = b.amount * 36; // Exact
-        else if(spot === 'RED' && res.c === 'RED') win = b.amount * 2;
-        else if(spot === 'BLACK' && res.c === 'BLACK') win = b.amount * 2;
-        else if(spot === 'EVEN' && num > 0 && num % 2 === 0) win = b.amount * 2;
-        else if(spot === 'ODD' && num > 0 && num % 2 !== 0) win = b.amount * 2;
-        else if(spot === '1-18' && num >= 1 && num <= 18) win = b.amount * 2;
-        else if(spot === '19-36' && num >= 19 && num <= 36) win = b.amount * 2;
-        else if(spot === '1ST12' && num >= 1 && num <= 12) win = b.amount * 3;
-        else if(spot === '2ND12' && num >= 13 && num <= 24) win = b.amount * 3;
-        else if(spot === '3RD12' && num >= 25 && num <= 36) win = b.amount * 3;
-        
-        // 2to1 Columns
-        else if(spot === '2TO1_1' && num > 0 && num % 3 === 1) win = b.amount * 3; // 1, 4, 7...
-        else if(spot === '2TO1_2' && num > 0 && num % 3 === 2) win = b.amount * 3; // 2, 5, 8...
-        else if(spot === '2TO1_3' && num > 0 && num % 3 === 0) win = b.amount * 3; // 3, 6, 9...
+        let isZero = (winNumString === '0' || winNumString === '00');
+        let isHit = b.numbers.includes(winNumString);
+
+        if (isHit) {
+            // Check Outside Bet Rule (Even/Odd, Red/Black, Dozens, Cols)
+            // If the bet covered more than 6 numbers, it's an outside bet.
+            // If result is 0/00, outside bets lose.
+            if (isZero && b.numbers.length > 6) {
+                // LOST (House edge)
+                win = 0;
+            } else {
+                // WIN
+                // Total Return = Bet + (Bet * Payout)
+                // b.payout is the ratio (e.g., 35 for straight, 1 for red/black)
+                let profit = b.amount * b.payout;
+                win = b.amount + profit; 
+            }
+        }
 
         if(win > 0) addWin(b.username, b.socketId, win, "Roulette");
     });
@@ -151,7 +159,7 @@ io.on('connection', (socket) => {
     socket.emit('music_sync', { ...musicState, seek: currentSeek });
     socket.emit('active_players_list', Object.values(activePlayers));
 
-    // AUTH (ROBUST: Checks both 'username' and 'u' keys)
+    // AUTH 
     socket.on('register', (d) => {
         let u = d.username || d.u;
         let p = d.password || d.p;
@@ -184,7 +192,10 @@ io.on('connection', (socket) => {
             users[u].balance -= amt;
             sock.emit('update_balance', users[u].balance);
             if(game === 'color') bets.color.push({ username: u, socketId: sock.id, color: data.color, amount: amt });
-            if(game === 'roulette') bets.roulette.push({ username: u, socketId: sock.id, bet: data.bet, amount: amt });
+            
+            // Roulette now receives { numbers: [], payout: X }
+            if(game === 'roulette') bets.roulette.push({ username: u, socketId: sock.id, numbers: data.numbers, payout: data.payout, amount: amt });
+            
             if(game === 'baccarat') bets.baccarat.push({ username: u, socketId: sock.id, bet: data.bet, amount: amt });
         } else { sock.emit('bet_error', "Insufficient Funds"); }
     }
